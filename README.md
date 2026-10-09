@@ -1,6 +1,6 @@
 # Conversion de coordonnées géodésiques en Python
 
-Programme pédagogique de géodésie géométrique, utilisable dans le terminal, pour convertir les coordonnées d’un point dans les deux sens :
+Programme pédagogique de géodésie géométrique avec une interface graphique Tkinter, permettant de convertir les coordonnées d’un point dans les deux sens :
 
 $$
 (\varphi,\lambda,h) \longleftrightarrow (X,Y,Z)
@@ -30,25 +30,26 @@ La méthode inverse est destinée aux points proches de la surface terrestre ou 
 
 Placer dans le même dossier :
 
-- `conversion_geodesique.py` : fonctions de calcul et menu du terminal.
+- `conversion_geodesique.py` : fonctions de calcul indépendantes de l’interface.
+- `interface_graphique.py` : interface graphique sur une seule fenêtre.
 - `test_conversion_geodesique.py` : tests automatiques.
 - `README.md` : ce document.
 
-Python 3 suffit. `math` et `unittest` font partie de la bibliothèque standard : aucune installation avec `pip` n’est nécessaire.
+Python 3 suffit. `math`, `tkinter` et `unittest` font partie de la bibliothèque standard : aucune installation avec `pip` n’est nécessaire dans une installation Python classique.
 
-Depuis un terminal ouvert dans ce dossier, lancer le programme :
+Depuis un terminal ouvert dans ce dossier, lancer l’interface :
 
 ```bash
-python conversion_geodesique.py
+python interface_graphique.py
 ```
 
 Sous Windows, si la commande `python` n’est pas disponible, essayer :
 
 ```bash
-py conversion_geodesique.py
+py interface_graphique.py
 ```
 
-Le menu demande d’abord l’ellipsoïde, puis le sens de conversion et les coordonnées. Il effectue une conversion puis se termine.
+La fenêtre permet de choisir l’ellipsoïde, le sens de conversion et les coordonnées. Le bouton **Convertir** affiche les résultats sans fermer l’application. La touche Entrée lance aussi la conversion et le bouton **Réinitialiser** restaure les valeurs initiales.
 
 ### Ellipsoïde par défaut : WGS84
 
@@ -200,33 +201,18 @@ Cette formule évite la division par `cos φ` de la formule `h = p/cos φ − N`
 
 **Retour :** `(latitude_deg, longitude_deg, h)`.
 
-### `lire_nombre(message)`
+### Interface graphique
 
-**Rôle :** afficher une question, lire la réponse et la transformer en nombre.
+Le fichier `interface_graphique.py` contient la classe `InterfaceConversionGeodesique`. Elle regroupe dans une seule fenêtre :
 
-- `input()` lit le texte.
-- `strip()` retire les espaces au début et à la fin.
-- `replace(",", ".")` accepte une virgule décimale.
-- `float()` convertit le texte en nombre ; une saisie non numérique déclenche une `ValueError`.
+- le choix entre WGS84 et un ellipsoïde personnalisé ;
+- le choix du sens de conversion ;
+- les trois champs de coordonnées ;
+- les résultats et les messages de validation.
 
-### `choisir_ellipsoide()`
+La fonction `convertir_texte_en_nombre()` accepte un point ou une virgule comme séparateur décimal. La méthode `_effectuer_conversion()` lit les champs, appelle les fonctions de calcul et affiche une erreur directement dans la fenêtre si une valeur est absente ou invalide.
 
-**Rôle :** proposer WGS84 ou des demi-axes personnalisés.
-
-Entrée vide ou choix `1` : WGS84. Choix `2` : saisie de `a` et `b`. Un autre choix déclenche une erreur. Les demi-axes sont vérifiés avant le retour `(a, b)`.
-
-### `main()`
-
-**Rôle :** gérer le dialogue avec l’utilisateur : choix, saisies, appel des fonctions et affichage.
-
-Le bloc `try/except ValueError` affiche un message compréhensible en cas de saisie invalide ou d’erreur de calcul prévue. Les coordonnées cartésiennes et la hauteur sont affichées avec quatre décimales ; les angles avec dix décimales. Cet affichage arrondit les valeurs visibles, pas les valeurs renvoyées par les fonctions.
-
-```python
-if __name__ == "__main__":
-    main()
-```
-
-Cette condition lance le menu lorsqu’on exécute directement le fichier. Lorsqu’un test importe les fonctions, le menu ne s’ouvre pas. Cette séparation permettra également de réutiliser les calculs dans une future interface.
+Les coordonnées cartésiennes et la hauteur sont affichées avec quatre décimales ; les angles avec dix décimales. Cet affichage arrondit seulement les valeurs visibles.
 
 ## 4. Principe des tests automatiques
 
@@ -237,7 +223,7 @@ Le fichier de tests utilise `unittest`. Le test principal réalise un **aller-re
 3. Donner directement ces résultats à `xyz_vers_geodesiques()`.
 4. Comparer les coordonnées retrouvées aux coordonnées initiales.
 
-Les valeurs intermédiaires ne sont **pas arrondies** avant leur utilisation par la seconde fonction. Copier les valeurs affichées dans le terminal introduirait une erreur d’arrondi supplémentaire.
+Les valeurs intermédiaires ne sont **pas arrondies** avant leur utilisation par la seconde fonction. Recopier les valeurs affichées dans l’interface introduirait une erreur d’arrondi supplémentaire.
 
 ### Exemple
 
@@ -347,4 +333,4 @@ Cependant, deux erreurs compatibles peuvent se compenser entre les fonctions. Le
 
 La suite actuelle ne teste pas automatiquement les entrées invalides, l’erreur au centre, la non-convergence, les ellipsoïdes personnalisés ni une conversion contre une référence externe indépendante. Elle ne réalise pas non plus un second parcours partant de jeux XYZ indépendants.
 
-Pour renforcer la validation ultérieurement, on pourra ajouter des coordonnées de référence vérifiées, des tests d’erreurs et d’autres ellipsoïdes. La séparation actuelle entre fonctions mathématiques, menu et tests facilite ces extensions ainsi que l’ajout d’une interface graphique.
+Pour renforcer la validation ultérieurement, on pourra ajouter des coordonnées de référence vérifiées, des tests d’erreurs et d’autres ellipsoïdes. La séparation actuelle entre fonctions mathématiques, interface graphique et tests facilite ces extensions.
