@@ -51,6 +51,10 @@ py interface_graphique.py
 
 La fenêtre permet de choisir l’ellipsoïde, le sens de conversion et les coordonnées. Le bouton **Convertir** affiche les résultats sans fermer l’application. La touche Entrée lance aussi la conversion et le bouton **Réinitialiser** restaure les valeurs initiales.
 
+### Aperçu de l’interface graphique
+
+![Interface graphique de conversion des coordonnées](images/interface_graphique.png)
+
 ### Ellipsoïde par défaut : WGS84
 
 $$
