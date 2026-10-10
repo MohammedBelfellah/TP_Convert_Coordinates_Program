@@ -156,7 +156,7 @@ Le code utilise `math.hypot(X, Y)` pour effectuer ce calcul.
 **Étape 3 — Longitude**
 
 $$
-\lambda=\operatorname{atan2}(Y,X)
+\lambda=\mathrm{atan2}(Y,X)
 $$
 
 `atan2` tient compte du quadrant et évite une division directe par X. L’ordre des arguments est important : **Y puis X**.
@@ -164,7 +164,7 @@ $$
 **Étape 4 — Estimation initiale de la latitude**
 
 $$
-\varphi_0=\operatorname{atan2}\bigl(Z,p(1-e^2)\bigr)
+\varphi_0=\mathrm{atan2}\bigl(Z,p(1-e^2)\bigr)
 $$
 
 Lorsque h = 0, les formules directes donnent `Z/p = (1−e²) tan φ` hors des pôles. Cette estimation est donc adaptée aux points proches de l’ellipsoïde.
@@ -178,7 +178,7 @@ N_k=\frac{a}{\sqrt{1-e^2\sin^2\varphi_k}}
 $$
 
 $$
-\varphi_{k+1}=\operatorname{atan2}\left(Z+e^2N_k\sin\varphi_k,p\right)
+\varphi_{k+1}=\mathrm{atan2}\left(Z+e^2N_k\sin\varphi_k,p\right)
 $$
 
 Cette relation découle des formules directes :
