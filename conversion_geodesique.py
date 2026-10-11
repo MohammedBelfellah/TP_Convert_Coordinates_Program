@@ -66,31 +66,28 @@ def geodesiques_vers_xyz(latitude_deg, longitude_deg, h, a, b):
 
 def xyz_vers_geodesiques(X, Y, Z, a, b):
     """
-    Convertit X, Y, Z en latitude, longitude et hauteur.
-
-    Méthode adaptée aux points proches de la surface terrestre
-    ou au-dessus, pas aux points profondément à l'intérieur.
+    Conversion directe de X, Y, Z en latitude, longitude et hauteur.
 
     Entrées :
-        X, Y, Z, a, b : mètres
+        X, Y, Z, a, b : mètres.
 
-    Sortie :
-        latitude et longitude : degrés
-        hauteur : mètres
+    Sorties :
+        latitude, longitude : degrés.
+        hauteur : mètres.
+        Longitude = None sur l'axe des pôles.
 
-    Sur l'axe des pôles, la longitude retournée est None :
-    elle est indéterminée.
+    Formule approchée adaptée aux ellipsoïdes terrestres
+    et aux points proches de la surface ou au-dessus.
     """
     verifier_ellipsoide(a, b)
 
     if not all(math.isfinite(valeur) for valeur in (X, Y, Z)):
         raise ValueError("Les coordonnées doivent être des nombres finis.")
 
-    # 1. Distance à l'axe des pôles.
-    # hypot(X, Y) calcule sqrt(X² + Y²).
+    # 1. Distance du point à l'axe des pôles.
     p = math.hypot(X, Y)
 
-    # 2. Traiter les cas particuliers.
+    # 2. Cas particuliers : centre et pôles.
     if p == 0:
         if Z == 0:
             raise ValueError(
@@ -103,42 +100,36 @@ def xyz_vers_geodesiques(X, Y, Z, a, b):
 
         return latitude_deg, longitude_deg, h
 
-    # 3. Calculer la longitude.
+    # 3. Paramètres de l'ellipsoïde.
+    e2 = calculer_excentricite(a, b)
+    f = (a - b) / a
+
+    # 4. Distance du point au centre de l'ellipsoïde.
+    # r = sqrt(X² + Y² + Z²).
+    r = math.hypot(p, Z)
+
+    # 5. Longitude.
     longitude = math.atan2(Y, X)
 
-    # 4. Première estimation de la latitude.
-    e2 = calculer_excentricite(a, b)
-    latitude = math.atan2(Z, p * (1 - e2))
+    # 6. Angle auxiliaire mu, utilisé par la méthode directe.
+    # Cet angle est calculé en radians.
+    mu = math.atan2(Z * ((1 - f) + a * e2 / r), p)
 
-    tolerance = 1e-12  # Radians
-    maximum_iterations = 50
+    # 7. Latitude calculée directement, sans itérations.
+    numerateur = Z * (1 - f) + e2 * a * math.sin(mu) ** 3
 
-    # 5. Améliorer progressivement la latitude.
-    for iteration in range(maximum_iterations):
-        N = calculer_N(latitude, a, e2)
+    denominateur = (1 - f) * (p - e2 * a * math.cos(mu) ** 3)
 
-        nouvelle_latitude = math.atan2(
-            Z + e2 * N * math.sin(latitude),
-            p
-        )
+    latitude = math.atan2(numerateur, denominateur)
 
-        difference = abs(nouvelle_latitude - latitude)
-        latitude = nouvelle_latitude
-
-        if difference < tolerance:
-            break
-    else:
-        # Ce bloc s'exécute si la boucle finit sans "break".
-        raise ValueError("La latitude n'a pas convergé après 50 itérations.")
-
-    # 6. Calculer la hauteur avec la latitude finale.
+    # 8. Hauteur ellipsoïdale.
     h = (
         p * math.cos(latitude)
         + Z * math.sin(latitude)
-        - a * math.sqrt(1 - e2 * math.sin(latitude)**2)
+        - a * math.sqrt(1 - e2 * math.sin(latitude) ** 2)
     )
 
-    # 7. Convertir les angles en degrés.
+    # 9. Conversion des angles en degrés.
     latitude_deg = math.degrees(latitude)
     longitude_deg = math.degrees(longitude)
 

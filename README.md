@@ -97,7 +97,7 @@ $$
 
 `math.isfinite()` rejette notamment les valeurs infinies et `NaN`. Si les paramètres sont invalides, la fonction déclenche une `ValueError`. Sinon, elle se termine sans valeur de retour explicite.
 
-Cette vérification accepte aussi une sphère. Elle ne garantit pas à elle seule que tout ellipsoïde extrêmement aplati sera adapté à la méthode itérative choisie.
+Cette vérification accepte aussi une sphère. Elle ne garantit pas à elle seule que tout ellipsoïde extrêmement aplati sera adapté à la formule directe approchée choisie.
 
 ### `geodesiques_vers_xyz(latitude_deg, longitude_deg, h, a, b)`
 
@@ -133,7 +133,7 @@ Aux latitudes exactement égales à ±90°, le programme fixe `X` et `Y` à zér
 
 ### `xyz_vers_geodesiques(X, Y, Z, a, b)`
 
-**Rôle :** retrouver latitude, longitude et hauteur à partir des coordonnées cartésiennes.
+**Rôle :** retrouver latitude, longitude et hauteur à partir des coordonnées cartésiennes au moyen d’une formule directe approchée, sans boucle d’itération.
 
 **Étape 1 — Distance à l’axe des pôles**
 
@@ -153,7 +153,23 @@ Le code utilise `math.hypot(X, Y)` pour effectuer ce calcul.
 
 `None` signifie ici que la longitude est indéterminée sur l’axe des pôles.
 
-**Étape 3 — Longitude**
+**Étape 3 — Paramètres de l’ellipsoïde**
+
+Le carré de la première excentricité `e2` est obtenu avec `calculer_excentricite()`. L’aplatissement est calculé par :
+
+$$
+f=\frac{a-b}{a}
+$$
+
+**Étape 4 — Distance au centre de l’ellipsoïde**
+
+$$
+r=\sqrt{p^2+Z^2}=\sqrt{X^2+Y^2+Z^2}
+$$
+
+Le code utilise `math.hypot(p, Z)` afin de calculer cette distance géocentrique.
+
+**Étape 5 — Longitude**
 
 $$
 \lambda=\mathrm{atan2}(Y,X)
@@ -161,37 +177,33 @@ $$
 
 `atan2` tient compte du quadrant et évite une division directe par X. L’ordre des arguments est important : **Y puis X**.
 
-**Étape 4 — Estimation initiale de la latitude**
+**Étape 6 — Angle auxiliaire**
 
 $$
-\varphi_0=\mathrm{atan2}\bigl(Z,p(1-e^2)\bigr)
+\mu=\mathrm{atan2}\left(Z\left((1-f)+\frac{ae^2}{r}\right),p\right)
 $$
 
-Lorsque h = 0, les formules directes donnent `Z/p = (1−e²) tan φ` hors des pôles. Cette estimation est donc adaptée aux points proches de l’ellipsoïde.
+L’angle auxiliaire `μ`, exprimé en radians, combine la position cartésienne du point et les paramètres de l’ellipsoïde. Il sert ensuite à calculer directement la latitude.
 
-**Étape 5 — Corrections successives**
+**Étape 7 — Latitude directe**
 
-À chaque itération k :
-
-$$
-N_k=\frac{a}{\sqrt{1-e^2\sin^2\varphi_k}}
-$$
+Le numérateur et le dénominateur, notés respectivement `u` et `v` ci-dessous, sont calculés séparément :
 
 $$
-\varphi_{k+1}=\mathrm{atan2}\left(Z+e^2N_k\sin\varphi_k,p\right)
+u=Z(1-f)+e^2a\sin^3\mu
 $$
 
-Cette relation découle des formules directes :
-
 $$
-Z+e^2N\sin\varphi=(N+h)\sin\varphi,\qquad p=(N+h)\cos\varphi
+v=(1-f)\left(p-e^2a\cos^3\mu\right)
 $$
 
-On mesure `abs(nouvelle_latitude - latitude)` et on remplace l’ancienne latitude par la nouvelle. Le calcul s’arrête lorsque la différence est inférieure à **10⁻¹² radian**.
+La latitude géodésique est alors obtenue sans corrections successives :
 
-Une limite de **50 itérations** évite une boucle sans fin. Dans le code, le `else` placé après le `for` s’exécute seulement si aucun `break` n’a arrêté la boucle : il signale alors la non-convergence par une `ValueError`.
+$$
+\varphi=\mathrm{atan2}(u,v)
+$$
 
-**Étape 6 — Hauteur finale**
+**Étape 8 — Hauteur ellipsoïdale**
 
 $$
 h=p\cos\varphi+Z\sin\varphi-a\sqrt{1-e^2\sin^2\varphi}
@@ -199,11 +211,11 @@ $$
 
 Cette formule évite la division par `cos φ` de la formule `h = p/cos φ − N`, fragile près des pôles. Elle s’obtient en additionnant `p cos φ` et `Z sin φ` à partir des relations directes.
 
-**Étape 7 — Conversion des unités**
+**Étape 9 — Conversion des unités**
 
 `math.degrees()` convertit les angles calculés en radians vers les degrés.
 
-**Retour :** `(latitude_deg, longitude_deg, h)`.
+**Retour :** `(latitude_deg, longitude_deg, h)`. La méthode est conçue pour les ellipsoïdes terrestres et les points proches de leur surface ou situés au-dessus. Son résultat est approché et son domaine ne comprend pas les points profondément à l’intérieur de l’ellipsoïde.
 
 ### Interface graphique
 
@@ -269,7 +281,7 @@ Les noms commençant par `test_` sont reconnus comme tests. La méthode `verifie
 
 Exemple : une hauteur retrouvée de `100.000002 m` pour une entrée de `100 m` passe le contrôle ; `100.02 m` ne le passe pas.
 
-Ces seuils contrôlent la cohérence numérique des fonctions. Ils ne prouvent pas une précision physique de 0,1 mm sur une mesure GPS réelle. La tolérance d’arrêt de l’itération, exprimée en radians, est distincte des tolérances des tests.
+Ces seuils contrôlent la cohérence numérique des fonctions. Ils ne prouvent pas une précision physique de 0,1 mm sur une mesure GPS réelle. La méthode inverse actuelle est directe : elle ne possède donc ni tolérance d’arrêt ni nombre maximal d’itérations.
 
 ### Cas de la longitude à ±180°
 
@@ -335,6 +347,6 @@ L’aller-retour contrôle la cohérence des deux conversions, l’utilisation d
 
 Cependant, deux erreurs compatibles peuvent se compenser entre les fonctions. Le point connu fournit un premier contrôle indépendant, mais ne suffit pas à certifier toutes les situations.
 
-La suite actuelle ne teste pas automatiquement les entrées invalides, l’erreur au centre, la non-convergence, les ellipsoïdes personnalisés ni une conversion contre une référence externe indépendante. Elle ne réalise pas non plus un second parcours partant de jeux XYZ indépendants.
+La suite actuelle ne teste pas automatiquement les entrées invalides, l’erreur au centre, les ellipsoïdes personnalisés, les limites de la formule approchée ni une conversion contre une référence externe indépendante. Elle ne réalise pas non plus un second parcours partant de jeux XYZ indépendants.
 
 Pour renforcer la validation ultérieurement, on pourra ajouter des coordonnées de référence vérifiées, des tests d’erreurs et d’autres ellipsoïdes. La séparation actuelle entre fonctions mathématiques, interface graphique et tests facilite ces extensions.
